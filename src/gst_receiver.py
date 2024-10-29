@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import gi
 import numpy as np
 
