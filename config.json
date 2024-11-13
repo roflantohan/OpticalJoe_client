@@ -1,0 +1,19 @@
+{
+    "env": "prod",
+    "websocket": {
+        "dev": {
+            "host": "192.168.1.111",
+            "port": "3030",
+            "reply_timeout": 10,
+            "ping_timeout": 5,
+            "sleep_timeout": 1
+        },
+        "prod": {
+            "host": "192.168.144.161",
+            "port": "3030",
+            "reply_timeout": 10,
+            "ping_timeout": 5,
+            "sleep_timemout": 1
+        }
+    }
+}

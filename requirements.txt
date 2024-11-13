@@ -1,5 +1,2 @@
 numpy==2.1.2
-opencv-python==4.10.0.84
-pycairo==1.27.0
-PyGObject==3.50.0
 websockets==13.1

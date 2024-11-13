@@ -1,14 +1,19 @@
-from multiprocessing import Process, Manager
+import asyncio
+from multiprocessing import Process
+
+from src.libs.shared_memory import SharedMemory
+from src.libs.config_loader import ConfigLoader
 from src.websocket_client import WebsocketClient
 from src.gui import TrackerAppGUI
-import asyncio
 
 if __name__ == "__main__":
-    manager = Manager()
-    shared_dict = manager.dict()
+    shmem = SharedMemory()
 
-    ws_module = WebsocketClient(shared_dict)
-    gui_module = TrackerAppGUI(shared_dict)
+    config_module = ConfigLoader("config.json", shmem)
+    config_module.load_config()
+
+    ws_module = WebsocketClient(shmem)
+    gui_module = TrackerAppGUI(shmem)
     
     p = Process(target=gui_module.start)
     p.start()
@@ -18,4 +23,4 @@ if __name__ == "__main__":
     loop.run_until_complete(ws_module.start())
 
     p.terminate()
-    # p.join()
+    p.join()

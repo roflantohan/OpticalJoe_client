@@ -4,12 +4,11 @@ import time
 import numpy as np
 
 from src.libs.shared_memory import SharedMemory
-from src.gst_receiver import GstReceiver
 
-class TrackerAppGUI(SharedMemory):
+class TrackerAppGUI():
 
-    def __init__(self, shared_dict):
-        super().__init__(shared_dict)
+    def __init__(self, shmem: SharedMemory):
+        self.shmem = shmem
         self.name_app = "TrackerApp"
 
         cam_type = "UDP"
@@ -47,6 +46,23 @@ class TrackerAppGUI(SharedMemory):
         
         self.server_param = dict()
 
+        self.headers = [
+            "is_server_connection", 
+            "is_tracking", 
+            "is_autopilot", 
+            "target_roi", 
+            "error_px", 
+            "new_course", 
+            "altitude", 
+            "airspeed", 
+            "groundspeed", 
+            "heading", 
+            "vertical_speed", 
+            "ground_distance", 
+            "flight_mode",
+            "throttle",
+        ]
+
     def connect_camera(self):
         path = "gst-launch-1.0 udpsrc port=6000 ! application/x-rtp,encoding-name=H264 ! rtph264depay ! avdec_h264  ! videoconvert ! videoscale ! video/x-raw,format=BGR ! appsink drop=1"
         self.cap = cv2.VideoCapture(path, cv2.CAP_GSTREAMER)
@@ -61,27 +77,23 @@ class TrackerAppGUI(SharedMemory):
         self.to_draw_border(frame, center_p1, center_p2, 10, 2, self.color_red) #center target
 
     def start(self):
-        video = GstReceiver()
+        # video = GstReceiver()
         self.connect_camera()
 
         cv2.namedWindow(self.name_app)
         cv2.setMouseCallback(self.name_app, self.mouse_handler)
         cv2.namedWindow(self.name_app, cv2.WINDOW_NORMAL)
-        cv2.setWindowProperty(self.name_app, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        # cv2.setWindowProperty(self.name_app, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        cv2.setWindowProperty(self.name_app, 1920, 1080)
+
 
         self.time_period[0] = time.time()
 
         while(True):
-            if not video.frame_available():
+            ret, frame = self.cap.read()
+
+            if not ret: 
                 continue
-
-            new_frame = video.frame()
-            frame = np.copy(new_frame)
-
-            # ret, frame = self.cap.read()
-
-            # if not ret: 
-            #     continue
 
             self.receive_incoming_param()
             self.get_center_frame(frame)
@@ -119,7 +131,7 @@ class TrackerAppGUI(SharedMemory):
                 self.send_init_roi()
                 continue
             if key == ord('g'):
-                self.send_autopilot()
+                self.send_flight_mode("GUIDED")
                 continue
             if key == ord('='):
                 if self.roi_size < 100:
@@ -135,6 +147,9 @@ class TrackerAppGUI(SharedMemory):
                     continue
             if key == ord("l"):
                 self.is_osd = not self.is_osd
+            if key == ord("m"):
+                self.send_flight_mode("MANUAL")
+                continue
 
         self.cap.release()
         cv2.destroyAllWindows()
@@ -168,15 +183,49 @@ class TrackerAppGUI(SharedMemory):
         text_position = (10, 40)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
 
-        if self.server_param["new_course"]:
-            text = f"Autopilot(g): ({self.server_param["new_course"][0]: .2f}, {self.server_param["new_course"][1]: .2f}, {self.server_param["new_course"][2]: .2f}, {self.server_param["new_course"][3]: .2f}) "
-        else:
-            text = f"Autopilot(g): (0, 0, 0, 0) "
-        font_color = self.color_green if self.server_param["is_autopilot"] else self.color_red
+        error_px = self.server_param.get("error_px", (0,0))
+        text = f"Error: ({error_px[0]: .2f}, {error_px[1]: .2f}) "
+        font_color = self.color_green if self.server_param["error_px"] else self.color_red
         text_position = (10, 60)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
-
-
+        
+        cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+        flight_mode = self.server_param.get("flight_mode", None)
+        text = f"FlightMode(g/m): {flight_mode}"
+        font_color = self.color_green if flight_mode else self.color_red
+        text_position = (10, 100)
+        cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+        air_speed = self.server_param.get("airspeed", 0) or 0
+        text = f"AirSpeed: {air_speed: .2f} m/s"
+        font_color = self.color_green if air_speed else self.color_red
+        text_position = (10, 120)
+        cv2.putText(frame, text, text_position,
+         font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+        ground_speed = self.server_param.get("groundspeed", 0) or 0
+        text = f"GndSpeed: {ground_speed: .2f} m/s"
+        font_color = self.color_green if ground_speed else self.color_red
+        text_position = (10, 140)
+        cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+        vertical_speed = self.server_param.get("vertical_speed", 0) or 0
+        text = f"VrlSpeed: {vertical_speed: .2f} m/s"
+        font_color = self.color_green if vertical_speed else self.color_red
+        text_position = (10, 160)
+        cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+        heading = self.server_param.get("heading", 0) or 0
+        text = f"Heading: {heading} deg"
+        font_color = self.color_green if heading else self.color_red
+        text_position = (10, 180)
+        cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+        altitude = self.server_param.get("altitude", 0) or 0
+        text = f"Altitude: {altitude: .2f} m"
+        font_color = self.color_green if altitude else self.color_red
+        text_position = (10, 200)
+        cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+        throttle = self.server_param.get("throttle", 0) or 0
+        text = f"Throttle: {throttle: .2f} %"
+        font_color = self.color_green if throttle else self.color_red
+        text_position = (10, 220)
+        cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
 
     def mouse_handler(self, event, x, y, flags, param):
         if event == cv2.EVENT_RBUTTONDOWN:
@@ -237,17 +286,16 @@ class TrackerAppGUI(SharedMemory):
         return point_top_left[0] <= roi[0] <= point_bottom_right[0] and point_top_left[1] <= roi[1] <= point_bottom_right[1]
     
     def receive_incoming_param(self):
-        headers = ["is_server_connection", "is_tracking", "is_autopilot", "target_roi", "error_px", "new_course", "altitude", "airspeed", "groundspeed", "heading", "vertical_speed", "ground_distance"]
-        for name in headers:
-            self.server_param[name] = self.read_data(name)
+        for name in self.headers:
+            self.server_param[name] = self.shmem.read_data(name)
 
     def send_init_roi(self):
-        self.write_data("init_roi", self.init_roi)
-        self.write_data("roi_size", self.roi_size)
+        self.shmem.write_data("init_roi", self.init_roi)
+        self.shmem.write_data("roi_size", self.roi_size)
 
     def send_retarget(self):
-        self.write_data('is_retarget', True)
-        self.write_data("roi_size", self.roi_size)
+        self.shmem.write_data('is_retarget', True)
+        self.shmem.write_data("roi_size", self.roi_size)
 
-    def send_autopilot(self):
-        self.write_data("new_is_autopilot", not self.server_param["is_autopilot"])
+    def send_flight_mode(self, mode):
+        self.shmem.write_data("new_flight_mode", mode)

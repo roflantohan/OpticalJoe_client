@@ -1,8 +1,12 @@
+#!/usr/bin/env python
+
+import cv2
 import gi
 import numpy as np
 
 gi.require_version('Gst', '1.0')
 from gi.repository import Gst
+
 
 class GstReceiver():
     """BlueRov video capture class constructor
@@ -16,7 +20,7 @@ class GstReceiver():
         video_source (string): Udp source ip and port
     """
 
-    def __init__(self, port=6000):
+    def __init__(self, port=5600):
         """Summary
         Args:
             port (int, optional): UDP port
@@ -29,18 +33,19 @@ class GstReceiver():
 
         # [Software component diagram](https://www.ardusub.com/software/components.html)
         # UDP video stream (:5600)
-        self.video_source = 'udpsrc port={}'.format(self.port)
+        # self.video_source = 'udpsrc port={}'.format(self.port)
+        self.video_source = 'rtspsrc location=rtsp://192.168.1.100:8554/camera latency=0 protocols=tcp '
+
         # [Rasp raw image](http://picamera.readthedocs.io/en/release-0.7/recipes2.html#raw-image-capture-yuv-format)
         # Cam -> CSI-2 -> H264 Raw (YUV 4-4-4 (12bits) I420)
         #self.video_codec = '! application/x-rtp, payload=96 ! rtph264depay ! h264parse ! avdec_h264'
-        self.video_codec = '! application/x-rtp,encoding-name=H264 ! rtph264depay ! avdec_h264'
+        self.video_codec = '! queue ! rtph265depay ! h265parse ! avdec_h265'
         # Python don't have nibble, convert YUV nibbles (4-4-4) to OpenCV standard BGR bytes (8-8-8)
         self.video_decode = \
-            ' ! videoconvert ! videoscale ! video/x-raw,format=BGR '
+            ' ! videoconvert ! video/x-raw,format=(string)BGR ! videoconvert'
         # Create a sink to get data
         self.video_sink_conf = \
-            '! appsink emit-signals=true sync=true max-buffers=2 drop=true'
-        
+            '! appsink emit-signals=true sync=false max-buffers=2 drop=true'
 
         self.video_pipe = None
         self.video_sink = None
@@ -96,9 +101,7 @@ class GstReceiver():
         Returns:
             iterable: bool and image frame, cap.read() output
         """
-        frame = self._frame
-        self._frame = None
-        return frame
+        return self._frame
 
     def frame_available(self):
         """Check if frame is available
@@ -129,17 +132,17 @@ class GstReceiver():
         return Gst.FlowReturn.OK
 
 
-# if __name__ == '__main__':
-#     # Create the video object
-#     # Add port= if is necessary to use a different one
-#     video = GstReceiver()
+if __name__ == '__main__':
+    # Create the video object
+    # Add port= if is necessary to use a different one
+    video = GstReceiver()
 
-#     while True:
-#         # Wait for the next frame
-#         if not video.frame_available():
-#             continue
+    while True:
+        # Wait for the next frame
+        if not video.frame_available():
+            continue
 
-#         frame = video.frame()
-#         cv2.imshow('frame', frame)
-#         if cv2.waitKey(1) & 0xFF == ord('q'):
-#             break
+        frame = video.frame()
+        cv2.imshow('frame', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break

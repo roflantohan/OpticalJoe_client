@@ -1,8 +1,9 @@
-from multiprocessing.managers import DictProxy
+from multiprocessing import Manager
 
 class SharedMemory:
-    def __init__(self, shared_dict: DictProxy):
-        self.shared_dict = shared_dict
+    def __init__(self):
+        manager = Manager()
+        self.shared_dict = manager.dict()
 
     def write_data(self, param, value = None):
         self.shared_dict[param] = value

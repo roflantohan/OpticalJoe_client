@@ -1,9 +1,27 @@
-# import logging
+import os
+import logging
+from pathlib import Path
 
-# logger = logging.getLogger(__name__)
+def set_logger(name):
+    index = 0
+    folder_path = Path(f"./logs/{name}")
+    folder_path.mkdir(parents=True, exist_ok=True)
+   
+    files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
+    
+    indexes = []
+    for file in files:
+        print(file)
+        indexes.append(int(file.split("_").pop()[0]))
 
-# # logging.basicConfig(
-# #     stream=sys.stdout,
-# #     level=logging.DEBUG,
-# #     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-# # )
+    if len(indexes):
+        index = max(indexes) + 1
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(f"./logs/{name}/pylog_{name}_{index}.log", mode='a'),
+            logging.StreamHandler() 
+        ]
+    )
