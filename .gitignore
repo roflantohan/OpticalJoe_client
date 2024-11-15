@@ -2,3 +2,7 @@ __pycache__
 .venv
 .DS_Store
 logs
+opencv
+opencv_contrib
+build_opencv
+build

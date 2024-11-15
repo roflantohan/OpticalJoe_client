@@ -184,7 +184,7 @@ class TrackerAppGUI():
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
 
         error_px = self.server_param.get("error_px", (0,0))
-        text = f"Error: ({error_px[0]: .2f}, {error_px[1]: .2f}) "
+        text = f"Err: ({error_px[0]: .2f}, {error_px[1]: .2f}) "
         font_color = self.color_green if self.server_param["error_px"] else self.color_red
         text_position = (10, 60)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
@@ -196,33 +196,33 @@ class TrackerAppGUI():
         text_position = (10, 100)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         air_speed = self.server_param.get("airspeed", 0) or 0
-        text = f"AirSpeed: {air_speed: .2f} m/s"
+        text = f"AirS: {air_speed: .2f} m/s"
         font_color = self.color_green if air_speed else self.color_red
         text_position = (10, 120)
         cv2.putText(frame, text, text_position,
          font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         ground_speed = self.server_param.get("groundspeed", 0) or 0
-        text = f"GndSpeed: {ground_speed: .2f} m/s"
+        text = f"GndS: {ground_speed: .2f} m/s"
         font_color = self.color_green if ground_speed else self.color_red
         text_position = (10, 140)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         vertical_speed = self.server_param.get("vertical_speed", 0) or 0
-        text = f"VrlSpeed: {vertical_speed: .2f} m/s"
+        text = f"VtlS: {vertical_speed: .2f} m/s"
         font_color = self.color_green if vertical_speed else self.color_red
         text_position = (10, 160)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         heading = self.server_param.get("heading", 0) or 0
-        text = f"Heading: {heading} deg"
+        text = f"Head: {heading} deg"
         font_color = self.color_green if heading else self.color_red
         text_position = (10, 180)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         altitude = self.server_param.get("altitude", 0) or 0
-        text = f"Altitude: {altitude: .2f} m"
+        text = f"Alt: {altitude: .2f} m"
         font_color = self.color_green if altitude else self.color_red
         text_position = (10, 200)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         throttle = self.server_param.get("throttle", 0) or 0
-        text = f"Throttle: {throttle: .2f} %"
+        text = f"Tht: {throttle: .2f} %"
         font_color = self.color_green if throttle else self.color_red
         text_position = (10, 220)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
