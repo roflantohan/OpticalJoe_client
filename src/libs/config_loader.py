@@ -21,29 +21,28 @@ class ConfigLoader():
 
     def load_env_config(self):
         self.env = self.config.get("env", "dev")
-        self.env = self.env if self.env != "dev" or self.env != "prod" else "dev"
+        self.env = self.env if self.env in ["dev", "prod"] else "dev"
         self.shmem.write_data("env", self.env)
         logging.debug(f"CONFIG: ENV mode -> {self.env}")
 
     def load_websocket_config(self):
         params: dict = self.config.get("websocket", {})
         env_params: dict = params.get(self.env, {})
+
         host = env_params.get("host", None)
-        port = env_params.get("port", None)
-        reply = env_params.get("reply_timeout", None)
-        ping = env_params.get("ping_timeout", None)
-        sleep = env_params.get("sleep_timeout", None)
-        
         self.shmem.write_data("ws_host", host)
-        logging.debug(f"CONFIG: WS HOST -> {host}")
+
+        port = env_params.get("port", None)
         self.shmem.write_data("ws_port", port)
-        logging.debug(f"CONFIG: WS port -> {port}")
+
+        reply = env_params.get("reply_timeout", None)
         self.shmem.write_data("ws_reply", reply)
-        logging.debug(f"CONFIG: WS reply timeout -> {reply}")
+
+        ping = env_params.get("ping_timeout", None)
         self.shmem.write_data("ws_ping", ping)
-        logging.debug(f"CONFIG: WS ping timeout -> {ping}")
+
+        sleep = env_params.get("sleep_timeout", None)
         self.shmem.write_data("ws_sleep", sleep)
-        logging.debug(f"CONFIG: WS sleep timeout -> {sleep}")
 
     def load_config(self):
         self.read_config_file()

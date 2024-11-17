@@ -1,8 +1,6 @@
 import cv2
 import math
 import time
-import numpy as np
-
 from src.libs.shared_memory import SharedMemory
 
 class TrackerAppGUI():
@@ -10,14 +8,6 @@ class TrackerAppGUI():
     def __init__(self, shmem: SharedMemory):
         self.shmem = shmem
         self.name_app = "TrackerApp"
-
-        cam_type = "UDP"
-        cam_path = ""
-
-        # camera param
-        self.cap = None # VideoCapture()
-        self.cam_pipeline = "" 
-        self.cam_param = (cam_type, cam_path)
 
         # frame param
         self.center_points = [(0,0), (0,0), (0,0)] # [left, middle, right]
@@ -65,7 +55,7 @@ class TrackerAppGUI():
 
     def connect_camera(self):
         path = "gst-launch-1.0 udpsrc port=6000 ! application/x-rtp,encoding-name=H264 ! rtph264depay ! avdec_h264  ! videoconvert ! videoscale ! video/x-raw,format=BGR ! appsink drop=1"
-        self.cap = cv2.VideoCapture(path, cv2.CAP_GSTREAMER)
+        return cv2.VideoCapture(path, cv2.CAP_GSTREAMER)
     
     def to_draw_preview_roi(self, frame):
         center_p1 = self.center_points[0]
@@ -83,22 +73,16 @@ class TrackerAppGUI():
         cv2.setWindowProperty(self.name_app, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         # cv2.setWindowProperty(self.name_app, 1920, 1080)
 
-        # frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
-        # cv2.putText(frame, 'No frame available', (50, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-        # cv2.imshow(self.name_app, frame)
-
-        self.connect_camera()
+        cap = self.connect_camera()
 
         self.time_period[0] = time.time()
 
         while(True):
-            ret, frame = self.cap.read()
-
+            ret, frame = cap.read()
             if not ret: 
                 continue
 
             self.receive_incoming_param()
-
             self.get_center_frame(frame)
             self.calculate_fps()
 
@@ -147,6 +131,7 @@ class TrackerAppGUI():
                     continue
             if key == ord("l"):
                 self.is_osd = not self.is_osd
+            
             if key == ord('g'):
                 self.send_flight_mode("GUIDED")
                 continue
@@ -154,7 +139,7 @@ class TrackerAppGUI():
                 self.send_flight_mode("MANUAL")
                 continue
 
-        self.cap.release()
+        cap.release()
         cv2.destroyAllWindows()
 
     def to_draw_OSD(self, frame):
@@ -190,32 +175,37 @@ class TrackerAppGUI():
         font_color = self.color_green if flight_mode else self.color_red
         text_position = (10, 100)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+
         air_speed = self.server_param.get("airspeed", 0) or 0
         text = f"AirS:{air_speed: .2f}"
         font_color = self.color_green if air_speed else self.color_red
         text_position = (10, 120)
-        cv2.putText(frame, text, text_position,
-         font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+        cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+
         ground_speed = self.server_param.get("groundspeed", 0) or 0
         text = f"GndS:{ground_speed: .2f}"
         font_color = self.color_green if ground_speed else self.color_red
         text_position = (10, 140)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+
         vertical_speed = self.server_param.get("vertical_speed", 0) or 0
         text = f"VtlS:{vertical_speed: .2f}"
         font_color = self.color_green if vertical_speed else self.color_red
         text_position = (10, 160)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+
         heading = self.server_param.get("heading", 0) or 0
         text = f"Head: {heading}"
         font_color = self.color_green if heading else self.color_red
         text_position = (10, 180)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+
         altitude = self.server_param.get("altitude", 0) or 0
         text = f"Alt:{altitude: .2f}"
         font_color = self.color_green if altitude else self.color_red
         text_position = (10, 200)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+        
         throttle = self.server_param.get("throttle", 0) or 0
         text = f"Tht:{throttle: .2f}"
         font_color = self.color_green if throttle else self.color_red
