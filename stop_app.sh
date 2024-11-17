@@ -1,25 +1,20 @@
 #!/bin/bash
 
-# Проверяем, существует ли PID-файл
 if [ ! -f "app.pid" ]; then
-    echo "PID-файл не найден. Возможно, приложение не запущено?"
+    echo "PID-file not found."
     exit 1
 fi
 
-# Читаем PID
 PID=$(cat app.pid)
 
-# Завершаем все процессы, принадлежащие основному процессу
 pkill -TERM -P $PID
 
-# Завершаем основной процесс
 kill $PID
 
-# Проверяем успешность завершения
 if [ $? -eq 0 ]; then
-    echo "Приложение с PID $PID и его дочерние процессы завершены."
+    echo "App with PID $PID is finished."
     rm app.pid
 else
-    echo "Не удалось завершить процесс с PID $PID."
+    echo "Error, PID $PID."
     exit 1
 fi
