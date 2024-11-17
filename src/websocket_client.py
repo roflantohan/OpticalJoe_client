@@ -40,7 +40,6 @@ class WebsocketClient():
             "ground_distance",
             "flight_mode",
             "throttle",
-            "arm_status",
         ]
 
     def handle_error(self):

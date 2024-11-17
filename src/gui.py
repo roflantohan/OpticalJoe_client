@@ -32,7 +32,7 @@ class TrackerAppGUI():
         self.is_drawing = False
 
         # tracking param for request
-        self.roi_size = 50 # pixels one of side
+        self.roi_size = 30 # pixels one of side
         self.init_roi = None # (x, y, h, w)
 
         self.border_size = 0.3 # max value = 1.0
@@ -73,19 +73,21 @@ class TrackerAppGUI():
 
         top_left = (self.mouse_xy[0] - self.roi_size // 2, self.mouse_xy[1] - self.roi_size // 2)
         bottom_right = (self.mouse_xy[0] + self.roi_size // 2, self.mouse_xy[1] + self.roi_size // 2)
-        self.to_draw_border(frame, top_left, bottom_right, 10, 2, self.color_red) #mouse targer
-        self.to_draw_border(frame, center_p1, center_p2, 10, 2, self.color_red) #center target
+        self.to_draw_border(frame, top_left, bottom_right, 5, 2, self.color_red) #mouse targer
+        self.to_draw_border(frame, center_p1, center_p2, 5, 2, self.color_red) #center target
 
     def start(self):
-        # video = GstReceiver()
-        self.connect_camera()
-
         cv2.namedWindow(self.name_app)
         cv2.setMouseCallback(self.name_app, self.mouse_handler)
         cv2.namedWindow(self.name_app, cv2.WINDOW_NORMAL)
-        # cv2.setWindowProperty(self.name_app, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-        cv2.setWindowProperty(self.name_app, 1920, 1080)
+        cv2.setWindowProperty(self.name_app, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        # cv2.setWindowProperty(self.name_app, 1920, 1080)
 
+        # frame = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        # cv2.putText(frame, 'No frame available', (50, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+        # cv2.imshow(self.name_app, frame)
+
+        self.connect_camera()
 
         self.time_period[0] = time.time()
 
@@ -96,6 +98,7 @@ class TrackerAppGUI():
                 continue
 
             self.receive_incoming_param()
+
             self.get_center_frame(frame)
             self.calculate_fps()
 
@@ -130,9 +133,6 @@ class TrackerAppGUI():
                 self.speed_factor = False
                 self.send_init_roi()
                 continue
-            if key == ord('g'):
-                self.send_flight_mode("GUIDED")
-                continue
             if key == ord('='):
                 if self.roi_size < 100:
                     self.roi_size += 10
@@ -147,13 +147,15 @@ class TrackerAppGUI():
                     continue
             if key == ord("l"):
                 self.is_osd = not self.is_osd
+            if key == ord('g'):
+                self.send_flight_mode("GUIDED")
+                continue
             if key == ord("m"):
                 self.send_flight_mode("MANUAL")
                 continue
 
         self.cap.release()
         cv2.destroyAllWindows()
-
 
     def to_draw_OSD(self, frame):
         font = cv2.FONT_HERSHEY_SIMPLEX
@@ -165,7 +167,7 @@ class TrackerAppGUI():
         text_position = (10, 20)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
 
-        text = f"WS: {"YES" if self.server_param["is_server_connection"] else "NO.Reconnect..."}"
+        text = f"WS"
         font_color = self.color_green if self.server_param["is_server_connection"] else self.color_red
         text_position = (100, 20)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
@@ -183,46 +185,39 @@ class TrackerAppGUI():
         text_position = (10, 40)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
 
-        error_px = self.server_param.get("error_px", (0,0))
-        text = f"Err: ({error_px[0]: .2f}, {error_px[1]: .2f}) "
-        font_color = self.color_green if self.server_param["error_px"] else self.color_red
-        text_position = (10, 60)
-        cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
-        
-        cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         flight_mode = self.server_param.get("flight_mode", None)
-        text = f"FlightMode(g/m): {flight_mode}"
+        text = f"FMode: {flight_mode}"
         font_color = self.color_green if flight_mode else self.color_red
         text_position = (10, 100)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         air_speed = self.server_param.get("airspeed", 0) or 0
-        text = f"AirS: {air_speed: .2f} m/s"
+        text = f"AirS:{air_speed: .2f}"
         font_color = self.color_green if air_speed else self.color_red
         text_position = (10, 120)
         cv2.putText(frame, text, text_position,
          font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         ground_speed = self.server_param.get("groundspeed", 0) or 0
-        text = f"GndS: {ground_speed: .2f} m/s"
+        text = f"GndS:{ground_speed: .2f}"
         font_color = self.color_green if ground_speed else self.color_red
         text_position = (10, 140)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         vertical_speed = self.server_param.get("vertical_speed", 0) or 0
-        text = f"VtlS: {vertical_speed: .2f} m/s"
+        text = f"VtlS:{vertical_speed: .2f}"
         font_color = self.color_green if vertical_speed else self.color_red
         text_position = (10, 160)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         heading = self.server_param.get("heading", 0) or 0
-        text = f"Head: {heading} deg"
+        text = f"Head: {heading}"
         font_color = self.color_green if heading else self.color_red
         text_position = (10, 180)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         altitude = self.server_param.get("altitude", 0) or 0
-        text = f"Alt: {altitude: .2f} m"
+        text = f"Alt:{altitude: .2f}"
         font_color = self.color_green if altitude else self.color_red
         text_position = (10, 200)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         throttle = self.server_param.get("throttle", 0) or 0
-        text = f"Tht: {throttle: .2f} %"
+        text = f"Tht:{throttle: .2f}"
         font_color = self.color_green if throttle else self.color_red
         text_position = (10, 220)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
@@ -253,7 +248,7 @@ class TrackerAppGUI():
         self.center_points[1] = (x,y)
         self.center_points[2] = (x + len // 2, y + len // 2)
     
-    def to_draw_border(self, frame, p1, p2, length=5, thickness=2, color=(0, 0, 255)):
+    def to_draw_border(self, frame, p1, p2, length=3, thickness=1, color=(0, 0, 255)):
         # top left corner
         cv2.line(frame, p1, (p1[0] + length, p1[1]), color, thickness)
         cv2.line(frame, p1, (p1[0], p1[1] + length), color, thickness)

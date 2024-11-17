@@ -10,11 +10,11 @@ Gst.init(None)
 def gstreamer_pipeline():
     """Создание пайплайна GStreamer для отправки фреймов по UDP."""
     return (
-        "appsrc name=app ! videoconvert ! video/x-raw, format=I420 ! "
+        "appsrc name=app  ! "
         "x264enc tune=zerolatency bitrate=500 speed-preset=ultrafast ! "
         "rtph264pay ! udpsink host=127.0.0.1 port=5000"
     )
-
+#gst-launch-1.0 autovideosrc ! videoconvert ! video/x-raw,width=1280,height=720 ! x264enc tune=zerolatency bitrate=500 speed-preset=ultrafast ! rtph264pay ! udpsink host=127.0.0.1 port=6000
 # Создание пайплайна
 pipeline = Gst.parse_launch(gstreamer_pipeline())
 appsrc = pipeline.get_by_name("app")
@@ -54,9 +54,9 @@ try:
         send_frame(frame)
 
         # Отображение фрейма
-        cv2.imshow("Frame", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        # # cv2.imshow("Frame", frame)
+        # if cv2.waitKey(1) & 0xFF == ord('q'):
+        #     break
 finally:
     # Завершение пайплайна и освобождение ресурсов
     appsrc.emit("end-of-stream")

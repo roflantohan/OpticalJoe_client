@@ -6,6 +6,11 @@ from src.libs.config_loader import ConfigLoader
 from src.websocket_client import WebsocketClient
 from src.gui import TrackerAppGUI
 
+def start_ws(ws_module):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(ws_module.start())
+
 if __name__ == "__main__":
     shmem = SharedMemory()
 
@@ -15,12 +20,9 @@ if __name__ == "__main__":
     ws_module = WebsocketClient(shmem)
     gui_module = TrackerAppGUI(shmem)
     
-    p = Process(target=gui_module.start)
+    p = Process(target=start_ws, args=(ws_module, ))
     p.start()
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(ws_module.start())
+    gui_module.start()
 
     p.terminate()
-    p.join()
