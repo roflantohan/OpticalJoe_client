@@ -1,6 +1,6 @@
 {
     "app_name": "OpticJoe",
-    "ws_host": "192.168.144.161",
+    "ws_host": "192.168.1.107",
     "ws_port": "3030",
     "ws_reply": 10,
     "ws_ping": 5,

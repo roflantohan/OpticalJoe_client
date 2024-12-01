@@ -1,27 +1,24 @@
 import cv2
 import math
 import time
+import numpy as np
 from src.libs.shared_memory import SharedMemory
+from src.video.gst_capture import VideoCapture
 
 class TrackerAppGUI():
-
     def __init__(self, shmem: SharedMemory):
         self.shmem = shmem
-        self.name_app = "TrackerApp"
+        self.name_app = self.shmem.read_config("app_name")
 
-        # frame param
         self.center_points = [(0,0), (0,0), (0,0)] # [left, middle, right]
 
-        # fps
         self.time_period = [None, None] # [start, end]
         self.frames_count = 0
         self.fps = 0
 
-        # mouse param
         self.mouse_xy = (-1, -1) # [x,y]
         self.is_drawing = False
 
-        # tracking param for request
         self.roi_size = 30 # pixels one of side
         self.init_roi = None # (x, y, h, w)
 
@@ -29,42 +26,20 @@ class TrackerAppGUI():
         self.is_center = False
         self.is_osd = True
 
-        # utils
         self.color_green = (0, 255, 51)
         self.color_red = (68, 36, 204)
         self.color_orange = (0, 176, 255)
         
         self.server_param = dict()
 
-        self.headers = [
-            "is_server_connection", 
-            "is_tracking", 
-            "is_autopilot", 
-            "target_roi", 
-            "error_px", 
-            "new_course", 
-            "altitude", 
-            "airspeed", 
-            "groundspeed", 
-            "heading", 
-            "vertical_speed", 
-            "ground_distance", 
-            "flight_mode",
-            "throttle",
-        ]
-
-    def connect_camera(self):
-        path = "gst-launch-1.0 udpsrc port=6000 ! application/x-rtp,encoding-name=H264 ! rtph264depay ! avdec_h264  ! videoconvert ! videoscale ! video/x-raw,format=BGR ! appsink drop=1"
-        return cv2.VideoCapture(path, cv2.CAP_GSTREAMER)
-    
     def to_draw_preview_roi(self, frame):
         center_p1 = self.center_points[0]
         center_p2 = self.center_points[2]
 
         top_left = (self.mouse_xy[0] - self.roi_size // 2, self.mouse_xy[1] - self.roi_size // 2)
         bottom_right = (self.mouse_xy[0] + self.roi_size // 2, self.mouse_xy[1] + self.roi_size // 2)
-        self.to_draw_border(frame, top_left, bottom_right, 5, 2, self.color_red) #mouse targer
-        self.to_draw_border(frame, center_p1, center_p2, 5, 2, self.color_red) #center target
+        self.to_draw_border(frame, top_left, bottom_right, 5, 2, self.color_red) # mouse targer
+        self.to_draw_border(frame, center_p1, center_p2, 5, 2, self.color_red) # center target
 
     def start(self):
         cv2.namedWindow(self.name_app)
@@ -73,14 +48,20 @@ class TrackerAppGUI():
         cv2.setWindowProperty(self.name_app, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         # cv2.setWindowProperty(self.name_app, 1920, 1080)
 
-        cap = self.connect_camera()
+        # cap = self.connect_camera()
+        cap = VideoCapture()
 
         self.time_period[0] = time.time()
 
         while(True):
-            ret, frame = cap.read()
-            if not ret: 
+            # ret, frame = cap.read()
+            # if not ret: 
+            #     continue
+
+            if not cap.frame_available():
                 continue
+
+            frame = np.array(cap.frame())
 
             self.receive_incoming_param()
             self.get_center_frame(frame)
@@ -139,7 +120,7 @@ class TrackerAppGUI():
                 self.send_flight_mode("MANUAL")
                 continue
 
-        cap.release()
+        # cap.release()
         cv2.destroyAllWindows()
 
     def to_draw_OSD(self, frame):
@@ -152,12 +133,12 @@ class TrackerAppGUI():
         text_position = (10, 20)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
 
-        text = f"WS"
-        font_color = self.color_green if self.server_param["is_server_connection"] else self.color_red
-        text_position = (100, 20)
-        cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+        # text = f"WS"
+        # font_color = self.color_green if self.server_param["is_server_connection"] else self.color_red
+        # text_position = (100, 20)
+        # cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
 
-        roi = self.server_param["target_roi"]
+        roi = self.server_param.get("target_roi", None)
         target_x = 0
         target_y = 0
         if roi:
@@ -176,37 +157,37 @@ class TrackerAppGUI():
         text_position = (10, 100)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
 
-        air_speed = self.server_param.get("airspeed", 0) or 0
+        air_speed = self.server_param.get("air_speed", 0)
         text = f"AirS:{air_speed: .2f}"
         font_color = self.color_green if air_speed else self.color_red
         text_position = (10, 120)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
 
-        ground_speed = self.server_param.get("groundspeed", 0) or 0
+        ground_speed = self.server_param.get("ground_speed", 0)
         text = f"GndS:{ground_speed: .2f}"
         font_color = self.color_green if ground_speed else self.color_red
         text_position = (10, 140)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
 
-        vertical_speed = self.server_param.get("vertical_speed", 0) or 0
+        vertical_speed = self.server_param.get("vertical_speed", 0)
         text = f"VtlS:{vertical_speed: .2f}"
         font_color = self.color_green if vertical_speed else self.color_red
         text_position = (10, 160)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
 
-        heading = self.server_param.get("heading", 0) or 0
+        heading = self.server_param.get("heading", 0)
         text = f"Head: {heading}"
         font_color = self.color_green if heading else self.color_red
         text_position = (10, 180)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
 
-        altitude = self.server_param.get("altitude", 0) or 0
+        altitude = self.server_param.get("altitude", 0)
         text = f"Alt:{altitude: .2f}"
         font_color = self.color_green if altitude else self.color_red
         text_position = (10, 200)
         cv2.putText(frame, text, text_position, font, font_scale, font_color, font_thickness, cv2.LINE_AA)
         
-        throttle = self.server_param.get("throttle", 0) or 0
+        throttle = self.server_param.get("throttle_level", 0)
         text = f"Tht:{throttle: .2f}"
         font_color = self.color_green if throttle else self.color_red
         text_position = (10, 220)
@@ -271,7 +252,7 @@ class TrackerAppGUI():
         return point_top_left[0] <= roi[0] <= point_bottom_right[0] and point_top_left[1] <= roi[1] <= point_bottom_right[1]
     
     def receive_incoming_param(self):
-        for name in self.headers:
+        for name in self.shmem.headers:
             self.server_param[name] = self.shmem.read_data(name)
 
     def send_init_roi(self):

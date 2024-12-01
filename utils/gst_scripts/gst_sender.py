@@ -7,13 +7,11 @@ from gi.repository import Gst, GLib
 # Инициализация GStreamer
 Gst.init(None)
 def gstreamer_pipeline():
-    """Создание пайплайна GStreamer для отправки фреймов по UDP."""
     return (
         "appsrc name=app  ! "
         "x264enc tune=zerolatency bitrate=500 speed-preset=ultrafast ! "
         "rtph264pay ! udpsink host=127.0.0.1 port=5000"
     )
-
 
 # Создание пайплайна
 pipeline = Gst.parse_launch(gstreamer_pipeline())
